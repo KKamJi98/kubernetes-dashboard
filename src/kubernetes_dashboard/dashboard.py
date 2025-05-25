@@ -16,7 +16,7 @@ import streamlit as st
 from kubernetes.config.kube_config import list_kube_config_contexts
 
 from kubernetes_dashboard.collectors import _non_running_pods, _total_pods, collect
-from kubernetes_dashboard.quantity import fmt_bytes_gib, fmt_cores
+from kubernetes_dashboard.quantity import fmt_bytes_gib, fmt_cores, fmt_percent
 
 
 def main():
@@ -87,6 +87,8 @@ def main():
                     # 메모리와 CPU 값을 사람이 읽기 쉬운 형식으로 변환
                     numeric_df["mem (GiB)"] = numeric_df["mem"].apply(fmt_bytes_gib)
                     numeric_df["cpu (cores)"] = numeric_df["cpu"].apply(fmt_cores)
+                    numeric_df["cpu %"] = numeric_df["cpu_percent"].apply(fmt_percent)
+                    numeric_df["mem %"] = numeric_df["mem_percent"].apply(fmt_percent)
 
                     col1, col2 = st.columns(2)
                     with col1:
@@ -94,7 +96,7 @@ def main():
                         # reset_index()를 추가하여 인덱스를 0부터 시작하도록 설정
                         st.table(
                             numeric_df.nlargest(3, "mem")[
-                                ["cluster", "node", "mem (GiB)"]
+                                ["cluster", "node", "mem (GiB)", "mem %"]
                             ]
                             .rename(columns={"mem (GiB)": "memory"})
                             .reset_index(drop=True)
@@ -103,7 +105,7 @@ def main():
                         st.subheader("Top-3 CPU Nodes")
                         st.table(
                             numeric_df.nlargest(3, "cpu")[
-                                ["cluster", "node", "cpu (cores)"]
+                                ["cluster", "node", "cpu (cores)", "cpu %"]
                             ]
                             .rename(columns={"cpu (cores)": "cpu"})
                             .reset_index(drop=True)
@@ -167,8 +169,27 @@ def main():
                 fmt_cores(row["cpu"]) if row["cpu"] != "N/A" else "N/A"
                 for _, row in display_df.iterrows()
             ]
+            display_df["cpu %"] = [
+                (
+                    fmt_percent(row["cpu_percent"])
+                    if row["cpu_percent"] != "N/A"
+                    else "N/A"
+                )
+                for _, row in display_df.iterrows()
+            ]
+            display_df["memory %"] = [
+                (
+                    fmt_percent(row["mem_percent"])
+                    if row["mem_percent"] != "N/A"
+                    else "N/A"
+                )
+                for _, row in display_df.iterrows()
+            ]
 
-            st.dataframe(display_df[["node", "memory", "cpu"]], hide_index=True)
+            st.dataframe(
+                display_df[["node", "memory", "memory %", "cpu", "cpu %"]],
+                hide_index=True,
+            )
         else:
             st.info("노드 정보를 찾을 수 없습니다.")
 

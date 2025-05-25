@@ -44,6 +44,7 @@ kubernetes-dashboard/
    - 노드별 CPU 및 메모리 사용량 표시
    - CPU는 cores 단위(소수점 2자리)로 표시
    - 메모리는 GiB 단위(소수점 2자리)로 표시
+   - CPU 및 메모리 사용량을 퍼센트(%)로도 표시
 
 3. **Pod 상태 모니터링**
    - Total Pods와 Unhealthy Pods 수 표시
@@ -81,6 +82,7 @@ kubernetes-dashboard/
 
 - CPU usage → **cores** 단위(소수점 2자리)로 표시
 - Memory usage → **GiB** 단위(소수점 2자리)로 표시
+- CPU 및 Memory 사용량 → **퍼센트(%)** 단위(소수점 2자리)로 표시
 
 ## 테스트 환경
 

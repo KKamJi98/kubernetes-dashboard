@@ -124,3 +124,21 @@ def fmt_cores(cores: Union[str, int, float]) -> str:
         '0.50 cores'
     """
     return f"{float(cores):.2f} cores"
+
+
+def fmt_percent(value: Union[str, int, float]) -> str:
+    """퍼센트 값을 포맷팅된 문자열로 변환합니다.
+
+    Args:
+        value (Union[str, int, float]): 퍼센트 값
+
+    Returns:
+        str: 'xx.xx%' 형식의 문자열
+
+    Examples:
+        >>> fmt_percent(75.5)
+        '75.50%'
+    """
+    if value == "N/A":
+        return "N/A"
+    return f"{float(value):.2f}%"
