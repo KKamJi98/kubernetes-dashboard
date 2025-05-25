@@ -170,15 +170,26 @@ def main():
                 for _, row in display_df.iterrows()
             ]
             display_df["cpu %"] = [
-                fmt_percent(row["cpu_percent"]) if row["cpu_percent"] != "N/A" else "N/A"
+                (
+                    fmt_percent(row["cpu_percent"])
+                    if row["cpu_percent"] != "N/A"
+                    else "N/A"
+                )
                 for _, row in display_df.iterrows()
             ]
             display_df["memory %"] = [
-                fmt_percent(row["mem_percent"]) if row["mem_percent"] != "N/A" else "N/A"
+                (
+                    fmt_percent(row["mem_percent"])
+                    if row["mem_percent"] != "N/A"
+                    else "N/A"
+                )
                 for _, row in display_df.iterrows()
             ]
 
-            st.dataframe(display_df[["node", "memory", "memory %", "cpu", "cpu %"]], hide_index=True)
+            st.dataframe(
+                display_df[["node", "memory", "memory %", "cpu", "cpu %"]],
+                hide_index=True,
+            )
         else:
             st.info("노드 정보를 찾을 수 없습니다.")
 

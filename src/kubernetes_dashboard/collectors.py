@@ -105,9 +105,9 @@ def _node_metrics(ctx: str) -> list[dict]:
             node_name = node.metadata.name
             node_capacities[node_name] = {
                 "cpu": cpu_to_cores(node.status.capacity["cpu"]),
-                "mem": mem_to_bytes(node.status.capacity["memory"])
+                "mem": mem_to_bytes(node.status.capacity["memory"]),
             }
-        
+
         # 노드 사용량 정보 가져오기
         res = cust.list_cluster_custom_object("metrics.k8s.io", "v1beta1", "nodes")
         rows = []
@@ -115,21 +115,21 @@ def _node_metrics(ctx: str) -> list[dict]:
             node_name = n["metadata"]["name"]
             cpu_usage = cpu_to_cores(n["usage"]["cpu"])
             mem_usage = mem_to_bytes(n["usage"]["memory"])
-            
+
             # 용량 대비 사용량 퍼센트 계산
             cpu_percent = "N/A"
             mem_percent = "N/A"
-            
+
             if node_name in node_capacities:
                 cpu_capacity = node_capacities[node_name]["cpu"]
                 mem_capacity = node_capacities[node_name]["mem"]
-                
+
                 if cpu_capacity > 0:
                     cpu_percent = (cpu_usage / cpu_capacity) * 100
-                
+
                 if mem_capacity > 0:
                     mem_percent = (mem_usage / mem_capacity) * 100
-            
+
             rows.append(
                 {
                     "cluster": ctx,
@@ -137,7 +137,7 @@ def _node_metrics(ctx: str) -> list[dict]:
                     "cpu": cpu_usage,
                     "mem": mem_usage,
                     "cpu_percent": cpu_percent,
-                    "mem_percent": mem_percent
+                    "mem_percent": mem_percent,
                 }
             )
         return rows
@@ -158,7 +158,7 @@ def _node_metrics(ctx: str) -> list[dict]:
                     "cpu": "N/A",
                     "mem": "N/A",
                     "cpu_percent": "N/A",
-                    "mem_percent": "N/A"
+                    "mem_percent": "N/A",
                 }
                 for n in nodes
             ]
