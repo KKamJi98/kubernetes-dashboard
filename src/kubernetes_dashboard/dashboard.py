@@ -1,4 +1,15 @@
-"""Main dashboard application with overview + per-cluster pages."""
+"""Main dashboard application with overview + per-cluster pages.
+
+이 모듈은 Streamlit을 사용하여 Kubernetes 멀티 클러스터 대시보드의
+UI 및 데이터 시각화를 구현합니다. 대시보드는 여러 클러스터의 개요 페이지와
+각 클러스터별 상세 페이지로 구성됩니다.
+
+주요 기능:
+- 여러 Kubernetes 클러스터 동시 모니터링
+- Pod 상태 및 개수 표시
+- 노드 리소스 사용량 시각화
+- 최근 재시작된 Pod 추적
+"""
 
 import pandas as pd
 import streamlit as st
@@ -9,7 +20,14 @@ from kubernetes_dashboard.quantity import fmt_bytes_gib, fmt_cores
 
 
 def main():
-    """대시보드 메인 함수"""
+    """대시보드 메인 함수
+
+    Streamlit 애플리케이션의 진입점으로, 다음 기능을 수행합니다:
+    1. 페이지 설정 및 레이아웃 구성
+    2. 사이드바에서 클러스터 선택 UI 제공
+    3. 페이지 네비게이션 (개요 또는 클러스터별 상세 페이지)
+    4. 선택된 클러스터에서 데이터 수집 및 시각화
+    """
     # ---------- Page setup ----------
     st.set_page_config("K8s Multi-Cluster Dashboard", layout="wide")
 
@@ -51,25 +69,55 @@ def main():
 
         # Format node metrics
         if not df_nodes.empty:
-            df_nodes["mem (GiB)"] = df_nodes["mem"].apply(fmt_bytes_gib)
-            df_nodes["cpu (cores)"] = df_nodes["cpu"].apply(fmt_cores)
+            # N/A 값 처리
+            df_nodes_filtered = df_nodes[
+                ~((df_nodes["cpu"] == "N/A") & (df_nodes["mem"] == "N/A"))
+            ]
 
-            col1, col2 = st.columns(2)
-            with col1:
-                st.subheader("Top-3 Memory Nodes")
-                # reset_index()를 추가하여 인덱스를 0부터 시작하도록 설정
-                st.table(
-                    df_nodes.nlargest(3, "mem")[["cluster", "node", "mem (GiB)"]]
-                    .rename(columns={"mem (GiB)": "memory"})
-                    .reset_index(drop=True)
+            if not df_nodes_filtered.empty:
+                # 숫자 형식의 데이터만 포함된 데이터프레임으로 필터링
+                numeric_df = df_nodes_filtered[
+                    ~(
+                        (df_nodes_filtered["cpu"] == "N/A")
+                        | (df_nodes_filtered["mem"] == "N/A")
+                    )
+                ]
+
+                if not numeric_df.empty:
+                    # 메모리와 CPU 값을 사람이 읽기 쉬운 형식으로 변환
+                    numeric_df["mem (GiB)"] = numeric_df["mem"].apply(fmt_bytes_gib)
+                    numeric_df["cpu (cores)"] = numeric_df["cpu"].apply(fmt_cores)
+
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.subheader("Top-3 Memory Nodes")
+                        # reset_index()를 추가하여 인덱스를 0부터 시작하도록 설정
+                        st.table(
+                            numeric_df.nlargest(3, "mem")[
+                                ["cluster", "node", "mem (GiB)"]
+                            ]
+                            .rename(columns={"mem (GiB)": "memory"})
+                            .reset_index(drop=True)
+                        )
+                    with col2:
+                        st.subheader("Top-3 CPU Nodes")
+                        st.table(
+                            numeric_df.nlargest(3, "cpu")[
+                                ["cluster", "node", "cpu (cores)"]
+                            ]
+                            .rename(columns={"cpu (cores)": "cpu"})
+                            .reset_index(drop=True)
+                        )
+                else:
+                    st.info(
+                        "metrics-server가 설치되지 않아 노드 리소스 사용량을 표시할 수 없습니다."
+                    )
+            else:
+                st.info(
+                    "metrics-server가 설치되지 않아 노드 리소스 사용량을 표시할 수 없습니다."
                 )
-            with col2:
-                st.subheader("Top-3 CPU Nodes")
-                st.table(
-                    df_nodes.nlargest(3, "cpu")[["cluster", "node", "cpu (cores)"]]
-                    .rename(columns={"cpu (cores)": "cpu"})
-                    .reset_index(drop=True)
-                )
+        else:
+            st.info("노드 정보를 찾을 수 없습니다.")
 
         # Recent restarts (all clusters)
         if data["recent_restarts"]:
@@ -82,6 +130,7 @@ def main():
     # ===========  Per-Cluster detailed pages  =============
     # ======================================================
     else:
+        # 클러스터별 상세 페이지 표시
         cluster = page  # page value equals context name
         st.header(f"🔍 Cluster Detail — {cluster}")
 
@@ -105,14 +154,23 @@ def main():
         # ------- Node table -------
         st.subheader("Node Resource Usage")
         node_df = df_nodes[df_nodes["cluster"] == cluster]
-        if not df_nodes.empty:
-            node_df = node_df.assign(
-                memory=node_df["mem"].apply(fmt_bytes_gib),
-                cpu=node_df["cpu"].apply(fmt_cores),
-            )[["node", "memory", "cpu"]]
-            st.dataframe(node_df, hide_index=True)
+        if not node_df.empty:
+            # N/A 값 처리
+            display_df = node_df.copy()
+
+            # 문자열 "N/A"를 그대로 표시
+            display_df["memory"] = [
+                fmt_bytes_gib(row["mem"]) if row["mem"] != "N/A" else "N/A"
+                for _, row in display_df.iterrows()
+            ]
+            display_df["cpu"] = [
+                fmt_cores(row["cpu"]) if row["cpu"] != "N/A" else "N/A"
+                for _, row in display_df.iterrows()
+            ]
+
+            st.dataframe(display_df[["node", "memory", "cpu"]], hide_index=True)
         else:
-            st.info("노드 메트릭을 찾을 수 없습니다 (metrics-server 확인 필요).")
+            st.info("노드 정보를 찾을 수 없습니다.")
 
         # ------- Recent restarts -------
         restarts = [r for r in data["recent_restarts"] if r["cluster"] == cluster]
