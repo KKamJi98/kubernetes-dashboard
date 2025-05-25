@@ -5,6 +5,10 @@
 
 오픈 소스 멀티 클러스터 Kubernetes 대시보드로, Streamlit을 사용하여 여러 Kubernetes 클러스터의 실시간 모니터링 및 관리 기능을 제공합니다.
 
+![Main Page](assets/img/main_homepage.png)
+
+![Sub Page](assets/img/cluster_detail.png)
+
 ## 주요 기능
 
 - 여러 Kubernetes 클러스터 동시 모니터링
@@ -21,6 +25,7 @@
 - Poetry 패키지 관리자
 - 하나 이상의 Kubernetes 클러스터 접근 권한
 - kubectl이 클러스터 컨텍스트로 구성되어 있어야 함
+- **metrics-server** (노드 및 Pod 리소스 사용량 확인에 필요)
 
 ### 설정
 
@@ -35,10 +40,18 @@
    poetry install
    ```
 
-3. 클러스터에 metrics-server 설치 확인:
+3. 클러스터에 metrics-server 설치:
    ```bash
+   # Kubernetes 클러스터에 metrics-server 설치
    kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+   
+   # 설치 확인
+   kubectl get deployment metrics-server -n kube-system
    ```
+
+   > **참고**: metrics-server가 설치되지 않은 경우에도 대시보드는 작동하지만, 노드 및 Pod의 CPU/메모리 사용량 정보는 표시되지 않습니다.
+
+   > **Minikube 사용자**: `minikube addons enable metrics-server` 명령으로 metrics-server를 활성화할 수 있습니다.
 
 ## 사용 방법
 

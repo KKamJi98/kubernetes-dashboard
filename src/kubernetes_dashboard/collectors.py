@@ -3,6 +3,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
+from kubernetes.client.exceptions import ApiException
 from kubernetes_dashboard.kube_client import api_for
 from kubernetes_dashboard.quantity import cpu_to_cores, mem_to_bytes
 
@@ -44,19 +45,40 @@ def _total_pods(ctx: str) -> int:
 
 
 def _node_metrics(ctx: str) -> list[dict]:
-    _, cust = api_for(ctx)
-    res = cust.list_cluster_custom_object("metrics.k8s.io", "v1beta1", "nodes")
-    rows = []
-    for n in res["items"]:
-        rows.append(
-            {
-                "cluster": ctx,
-                "node": n["metadata"]["name"],
-                "cpu": cpu_to_cores(n["usage"]["cpu"]),
-                "mem": mem_to_bytes(n["usage"]["memory"]),
-            }
-        )
-    return rows
+    """노드 메트릭을 수집합니다. metrics-server가 없으면 빈 리스트를 반환합니다."""
+    try:
+        _, cust = api_for(ctx)
+        res = cust.list_cluster_custom_object("metrics.k8s.io", "v1beta1", "nodes")
+        rows = []
+        for n in res["items"]:
+            rows.append(
+                {
+                    "cluster": ctx,
+                    "node": n["metadata"]["name"],
+                    "cpu": cpu_to_cores(n["usage"]["cpu"]),
+                    "mem": mem_to_bytes(n["usage"]["memory"]),
+                }
+            )
+        return rows
+    except ApiException as e:
+        if e.status == 404:
+            # metrics-server가 설치되지 않은 경우
+            print(f"Warning: metrics-server not found in cluster '{ctx}'. Node metrics will not be available.")
+            # 노드 목록은 가져오되 메트릭은 N/A로 설정
+            core, _ = api_for(ctx)
+            nodes = core.list_node().items
+            return [
+                {
+                    "cluster": ctx,
+                    "node": n.metadata.name,
+                    "cpu": "N/A",
+                    "mem": "N/A",
+                }
+                for n in nodes
+            ]
+        else:
+            # 다른 API 오류는 다시 발생시킴
+            raise
 
 
 def _recent_restarts(ctx: str) -> list[dict]:
