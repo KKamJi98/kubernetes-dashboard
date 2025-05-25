@@ -134,6 +134,11 @@ python -m kubernetes_dashboard
    - `profile = "black"` 설정으로 isort가 black과 호환되는 스타일 사용
    - 동일한 line_length 값으로 일관된 라인 길이 유지
 
+4. **테스트 자동화**
+   - pytest를 사용한 단위 테스트 작성
+   - CI 파이프라인에서 테스트 자동 실행
+   - 테스트, black, isort가 모두 통과해야 빌드 성공
+
 ## 향후 개선 사항
 
 1. **자동 새로고침 기능**
