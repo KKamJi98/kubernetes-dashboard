@@ -10,7 +10,11 @@ import os
 
 if __name__ == "__main__":
     # Streamlit CLI를 직접 호출하여 경고 메시지 방지
-    sys.argv = ["streamlit", "run", 
-                os.path.join(os.path.dirname(__file__), 
-                            "src/kubernetes_dashboard/dashboard.py")]
+    sys.argv = [
+        "streamlit",
+        "run",
+        os.path.join(
+            os.path.dirname(__file__), "src/kubernetes_dashboard/dashboard.py"
+        ),
+    ]
     sys.exit(stcli.main())

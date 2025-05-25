@@ -1,6 +1,8 @@
 """Kubernetes API handler caching for each cluster."""
+
 from functools import lru_cache
 from kubernetes import client, config
+
 
 @lru_cache(maxsize=16)
 def api_for(context: str):

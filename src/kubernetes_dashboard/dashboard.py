@@ -1,10 +1,12 @@
 """Main dashboard application with overview + per-cluster pages."""
+
 import pandas as pd
 import streamlit as st
 from kubernetes.config.kube_config import list_kube_config_contexts
 
 from kubernetes_dashboard.collectors import collect, _non_running_pods, _total_pods
 from kubernetes_dashboard.quantity import fmt_bytes_gib, fmt_cores
+
 
 def main():
     """대시보드 메인 함수"""
@@ -14,7 +16,9 @@ def main():
     # ---------- Sidebar: cluster multi-select ----------
     contexts, _ = list_kube_config_contexts()
     ctx_names = [c["name"] for c in contexts]
-    selected = st.sidebar.multiselect("Select Clusters", ctx_names, default=ctx_names[:1])
+    selected = st.sidebar.multiselect(
+        "Select Clusters", ctx_names, default=ctx_names[:1]
+    )
     if not selected:
         st.stop()
 
@@ -37,7 +41,7 @@ def main():
             st.metric("Total Pods", data["total_pods"])
         with col2:
             st.metric("Unhealthy Pods", data["non_running_total"])
-        
+
         # Non-running pods list
         if data["non_running_pods"]:
             st.subheader("Non-Running Pods")
@@ -78,7 +82,7 @@ def main():
     # ===========  Per-Cluster detailed pages  =============
     # ======================================================
     else:
-        cluster = page          # page value equals context name
+        cluster = page  # page value equals context name
         st.header(f"🔍 Cluster Detail — {cluster}")
 
         # ------- Pod 상태 지표 -------
@@ -87,9 +91,11 @@ def main():
             st.metric("Total Pods", _total_pods(cluster))
         with col2:
             st.metric("Unhealthy Pods", _non_running_pods(cluster))
-        
+
         # Non-running pods list for this cluster
-        cluster_non_running_pods = [p for p in data["non_running_pods"] if p["cluster"] == cluster]
+        cluster_non_running_pods = [
+            p for p in data["non_running_pods"] if p["cluster"] == cluster
+        ]
         if cluster_non_running_pods:
             st.subheader("Non-Running Pods")
             st.dataframe(pd.DataFrame(cluster_non_running_pods))
@@ -109,14 +115,13 @@ def main():
             st.info("노드 메트릭을 찾을 수 없습니다 (metrics-server 확인 필요).")
 
         # ------- Recent restarts -------
-        restarts = [
-            r for r in data["recent_restarts"] if r["cluster"] == cluster
-        ]
+        restarts = [r for r in data["recent_restarts"] if r["cluster"] == cluster]
         if restarts:
             st.subheader("Pods Restarted in Last Hour")
             st.dataframe(pd.DataFrame(restarts))
         else:
             st.success("최근 1시간 내 재시작된 Pod가 없습니다.")
+
 
 if __name__ == "__main__":
     main()
