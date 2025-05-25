@@ -85,27 +85,59 @@ def _node_metrics(ctx: str) -> list[dict]:
 
     metrics.k8s.io API를 통해 노드의 CPU 및 메모리 사용량을 수집합니다.
     metrics-server가 설치되지 않은 경우에는 노드 목록만 반환하고 메트릭은 'N/A'로 표시합니다.
+    노드의 총 용량 대비 현재 사용량을 퍼센트(%)로 계산합니다.
 
     Args:
         ctx (str): Kubernetes 컨텍스트 이름
 
     Returns:
-        list[dict]: 노드 메트릭 정보 목록 (cluster, node, cpu, mem 포함)
+        list[dict]: 노드 메트릭 정보 목록 (cluster, node, cpu, mem, cpu_percent, mem_percent 포함)
 
     Raises:
         ApiException: metrics-server API 호출 중 404 이외의 오류가 발생한 경우
     """
     try:
-        _, cust = api_for(ctx)
+        core, cust = api_for(ctx)
+        # 노드 용량 정보 가져오기
+        nodes = core.list_node().items
+        node_capacities = {}
+        for node in nodes:
+            node_name = node.metadata.name
+            node_capacities[node_name] = {
+                "cpu": cpu_to_cores(node.status.capacity["cpu"]),
+                "mem": mem_to_bytes(node.status.capacity["memory"])
+            }
+        
+        # 노드 사용량 정보 가져오기
         res = cust.list_cluster_custom_object("metrics.k8s.io", "v1beta1", "nodes")
         rows = []
         for n in res["items"]:
+            node_name = n["metadata"]["name"]
+            cpu_usage = cpu_to_cores(n["usage"]["cpu"])
+            mem_usage = mem_to_bytes(n["usage"]["memory"])
+            
+            # 용량 대비 사용량 퍼센트 계산
+            cpu_percent = "N/A"
+            mem_percent = "N/A"
+            
+            if node_name in node_capacities:
+                cpu_capacity = node_capacities[node_name]["cpu"]
+                mem_capacity = node_capacities[node_name]["mem"]
+                
+                if cpu_capacity > 0:
+                    cpu_percent = (cpu_usage / cpu_capacity) * 100
+                
+                if mem_capacity > 0:
+                    mem_percent = (mem_usage / mem_capacity) * 100
+            
             rows.append(
                 {
                     "cluster": ctx,
-                    "node": n["metadata"]["name"],
-                    "cpu": cpu_to_cores(n["usage"]["cpu"]),
-                    "mem": mem_to_bytes(n["usage"]["memory"]),
+                    "node": node_name,
+                    "cpu": cpu_usage,
+                    "mem": mem_usage,
+                    "cpu_percent": cpu_percent,
+                    "mem_percent": mem_percent
                 }
             )
         return rows
@@ -125,6 +157,8 @@ def _node_metrics(ctx: str) -> list[dict]:
                     "node": n.metadata.name,
                     "cpu": "N/A",
                     "mem": "N/A",
+                    "cpu_percent": "N/A",
+                    "mem_percent": "N/A"
                 }
                 for n in nodes
             ]
