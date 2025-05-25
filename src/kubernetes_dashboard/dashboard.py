@@ -1,4 +1,15 @@
-"""Main dashboard application with overview + per-cluster pages."""
+"""Main dashboard application with overview + per-cluster pages.
+
+이 모듈은 Streamlit을 사용하여 Kubernetes 멀티 클러스터 대시보드의 
+UI 및 데이터 시각화를 구현합니다. 대시보드는 여러 클러스터의 개요 페이지와
+각 클러스터별 상세 페이지로 구성됩니다.
+
+주요 기능:
+- 여러 Kubernetes 클러스터 동시 모니터링
+- Pod 상태 및 개수 표시
+- 노드 리소스 사용량 시각화
+- 최근 재시작된 Pod 추적
+"""
 
 import pandas as pd
 import streamlit as st
@@ -9,7 +20,14 @@ from kubernetes_dashboard.quantity import fmt_bytes_gib, fmt_cores
 
 
 def main():
-    """대시보드 메인 함수"""
+    """대시보드 메인 함수
+    
+    Streamlit 애플리케이션의 진입점으로, 다음 기능을 수행합니다:
+    1. 페이지 설정 및 레이아웃 구성
+    2. 사이드바에서 클러스터 선택 UI 제공
+    3. 페이지 네비게이션 (개요 또는 클러스터별 상세 페이지)
+    4. 선택된 클러스터에서 데이터 수집 및 시각화
+    """
     # ---------- Page setup ----------
     st.set_page_config("K8s Multi-Cluster Dashboard", layout="wide")
 
@@ -59,6 +77,7 @@ def main():
                 numeric_df = df_nodes_filtered[~((df_nodes_filtered["cpu"] == "N/A") | (df_nodes_filtered["mem"] == "N/A"))]
                 
                 if not numeric_df.empty:
+                    # 메모리와 CPU 값을 사람이 읽기 쉬운 형식으로 변환
                     numeric_df["mem (GiB)"] = numeric_df["mem"].apply(fmt_bytes_gib)
                     numeric_df["cpu (cores)"] = numeric_df["cpu"].apply(fmt_cores)
 
@@ -96,6 +115,7 @@ def main():
     # ===========  Per-Cluster detailed pages  =============
     # ======================================================
     else:
+        # 클러스터별 상세 페이지 표시
         cluster = page  # page value equals context name
         st.header(f"🔍 Cluster Detail — {cluster}")
 
