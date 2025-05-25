@@ -4,7 +4,8 @@ import pandas as pd
 import streamlit as st
 from kubernetes.config.kube_config import list_kube_config_contexts
 
-from kubernetes_dashboard.collectors import collect, _non_running_pods, _total_pods
+from kubernetes_dashboard.collectors import (_non_running_pods, _total_pods,
+                                             collect)
 from kubernetes_dashboard.quantity import fmt_bytes_gib, fmt_cores
 
 

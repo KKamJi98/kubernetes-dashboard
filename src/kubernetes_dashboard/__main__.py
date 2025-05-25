@@ -2,9 +2,10 @@
 Kubernetes Dashboard 모듈 실행 진입점
 """
 
-import streamlit.web.cli as stcli
-import sys
 import os
+import sys
+
+import streamlit.web.cli as stcli
 
 
 def main():
