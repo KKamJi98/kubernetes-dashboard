@@ -114,6 +114,26 @@ python -m kubernetes_dashboard
    - GitHub Actions를 통한 자동 테스트 및 코드 품질 검사
    - Black 및 isort 검사를 통과해야 빌드 성공
 
+3. **Black과 isort 통합 설정**
+   - pyproject.toml에 다음 설정을 추가하여 두 도구가 일관되게 작동하도록 함:
+   ```toml
+   [tool.black]
+   line-length = 88
+   target-version = ["py313"]
+   include = '\.pyi?$'
+
+   [tool.isort]
+   profile = "black"
+   line_length = 88
+   multi_line_output = 3
+   include_trailing_comma = true
+   force_grid_wrap = 0
+   use_parentheses = true
+   ensure_newline_before_comments = true
+   ```
+   - `profile = "black"` 설정으로 isort가 black과 호환되는 스타일 사용
+   - 동일한 line_length 값으로 일관된 라인 길이 유지
+
 ## 향후 개선 사항
 
 1. **자동 새로고침 기능**
