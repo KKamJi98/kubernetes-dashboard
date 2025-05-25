@@ -103,6 +103,17 @@ poetry run streamlit run src/kubernetes_dashboard/dashboard.py
 python -m kubernetes_dashboard
 ```
 
+## 코드 품질 관리
+
+1. **코드 포맷팅**
+   - Black을 사용한 일관된 코드 스타일 적용
+   - isort를 사용한 import 문 정렬
+   - CI 파이프라인에서 코드 스타일 검사 자동화
+
+2. **CI 파이프라인**
+   - GitHub Actions를 통한 자동 테스트 및 코드 품질 검사
+   - Black 및 isort 검사를 통과해야 빌드 성공
+
 ## 향후 개선 사항
 
 1. **자동 새로고침 기능**
