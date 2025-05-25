@@ -13,10 +13,10 @@ import streamlit.web.cli as stcli
 
 def main():
     """Poetry 스크립트 실행을 위한 진입점
-    
+
     dashboard.py 파일의 경로를 찾아 Streamlit CLI를 통해 실행합니다.
     Poetry의 스크립트 엔트리 포인트로 사용됩니다.
-    
+
     Returns:
         None: 프로그램 종료 코드는 sys.exit()을 통해 전달됩니다.
     """

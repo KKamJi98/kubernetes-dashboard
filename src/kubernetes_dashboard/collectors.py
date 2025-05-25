@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 from kubernetes.client.exceptions import ApiException
+
 from kubernetes_dashboard.kube_client import api_for
 from kubernetes_dashboard.quantity import cpu_to_cores, mem_to_bytes
 
@@ -16,10 +17,10 @@ from kubernetes_dashboard.quantity import cpu_to_cores, mem_to_bytes
 # ------------------- Single cluster functions ------------------- #
 def _get_all_pods(ctx: str) -> list:
     """모든 Pod 목록을 반환합니다.
-    
+
     Args:
         ctx (str): Kubernetes 컨텍스트 이름
-        
+
     Returns:
         list: Pod 객체 목록
     """
@@ -29,12 +30,12 @@ def _get_all_pods(ctx: str) -> list:
 
 def _non_running_pods_list(ctx: str) -> list[dict]:
     """Non-running pods 목록을 반환합니다.
-    
+
     Running 상태가 아닌 모든 Pod의 정보를 수집합니다.
-    
+
     Args:
         ctx (str): Kubernetes 컨텍스트 이름
-        
+
     Returns:
         list[dict]: Non-running Pod 정보 목록 (cluster, pod, ns, node, phase, reason 포함)
     """
@@ -57,10 +58,10 @@ def _non_running_pods_list(ctx: str) -> list[dict]:
 
 def _non_running_pods(ctx: str) -> int:
     """Non-running pods 개수를 반환합니다.
-    
+
     Args:
         ctx (str): Kubernetes 컨텍스트 이름
-        
+
     Returns:
         int: Running 상태가 아닌 Pod의 개수
     """
@@ -69,10 +70,10 @@ def _non_running_pods(ctx: str) -> int:
 
 def _total_pods(ctx: str) -> int:
     """전체 Pod 개수를 반환합니다.
-    
+
     Args:
         ctx (str): Kubernetes 컨텍스트 이름
-        
+
     Returns:
         int: 클러스터 내 모든 Pod의 개수
     """
@@ -81,16 +82,16 @@ def _total_pods(ctx: str) -> int:
 
 def _node_metrics(ctx: str) -> list[dict]:
     """노드 메트릭을 수집합니다. metrics-server가 없으면 빈 리스트를 반환합니다.
-    
+
     metrics.k8s.io API를 통해 노드의 CPU 및 메모리 사용량을 수집합니다.
     metrics-server가 설치되지 않은 경우에는 노드 목록만 반환하고 메트릭은 'N/A'로 표시합니다.
-    
+
     Args:
         ctx (str): Kubernetes 컨텍스트 이름
-        
+
     Returns:
         list[dict]: 노드 메트릭 정보 목록 (cluster, node, cpu, mem 포함)
-        
+
     Raises:
         ApiException: metrics-server API 호출 중 404 이외의 오류가 발생한 경우
     """
@@ -111,7 +112,10 @@ def _node_metrics(ctx: str) -> list[dict]:
     except ApiException as e:
         if e.status == 404:
             # metrics-server가 설치되지 않은 경우
-            print(f"Warning: metrics-server not found in cluster '{ctx}'. Node metrics will not be available.")
+            print(
+                f"Warning: metrics-server not found in cluster '{ctx}'. "
+                f"Node metrics will not be available."
+            )
             # 노드 목록은 가져오되 메트릭은 N/A로 설정
             core, _ = api_for(ctx)
             nodes = core.list_node().items
@@ -131,12 +135,12 @@ def _node_metrics(ctx: str) -> list[dict]:
 
 def _recent_restarts(ctx: str) -> list[dict]:
     """최근 1시간 내에 재시작된 Pod 목록을 반환합니다.
-    
+
     컨테이너의 마지막 종료 시간을 확인하여 최근 1시간 내에 재시작된 Pod를 식별합니다.
-    
+
     Args:
         ctx (str): Kubernetes 컨텍스트 이름
-        
+
     Returns:
         list[dict]: 최근 재시작된 Pod 정보 목록 (cluster, pod, ns, node, restarts 포함)
     """
@@ -168,12 +172,12 @@ def _recent_restarts(ctx: str) -> list[dict]:
 # ------------------- Multi-cluster integration entry point ------------------- #
 def collect(selected: tuple[str, ...]):
     """여러 클러스터에서 데이터를 병렬로 수집하여 통합합니다.
-    
+
     ThreadPoolExecutor를 사용하여 선택된 모든 클러스터에서 동시에 데이터를 수집합니다.
-    
+
     Args:
         selected (tuple[str, ...]): 데이터를 수집할 Kubernetes 컨텍스트 이름 튜플
-        
+
     Returns:
         dict: 다음 키를 포함하는 통합된 데이터 딕셔너리
             - total_pods: 모든 클러스터의 총 Pod 개수

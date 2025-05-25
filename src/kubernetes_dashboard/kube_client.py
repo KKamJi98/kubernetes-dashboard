@@ -12,13 +12,13 @@ from kubernetes import client, config
 @lru_cache(maxsize=16)
 def api_for(context: str):
     """특정 컨텍스트에 대한 Kubernetes API 클라이언트를 반환합니다.
-    
+
     LRU 캐시를 사용하여 동일한 컨텍스트에 대한 반복 호출을 최적화합니다.
     최대 16개의 다른 컨텍스트를 캐싱할 수 있습니다.
-    
+
     Args:
         context (str): Kubernetes 컨텍스트 이름
-        
+
     Returns:
         tuple: (CoreV1Api, CustomObjectsApi) 클라이언트 객체 튜플
     """
