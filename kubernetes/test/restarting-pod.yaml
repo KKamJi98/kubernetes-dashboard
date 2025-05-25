@@ -16,7 +16,7 @@ spec:
       echo "Starting container..."
       sleep 10
       echo "Simulating crash..."
-      exit 1
+      exit 1  # Intentional failure to trigger container restart
     resources:
       requests:
         memory: "64Mi"
@@ -24,4 +24,7 @@ spec:
       limits:
         memory: "128Mi"
         cpu: "200m"
+  # Always restart the pod when it exits
+  # This ensures the pod will continuously restart and increment the restart counter
+  # which is useful for testing the dashboard's pod restart detection functionality
   restartPolicy: Always

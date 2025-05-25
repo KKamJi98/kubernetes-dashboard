@@ -1,8 +1,23 @@
 #!/usr/bin/env python3
 """
-Kubernetes Multi-Cluster Dashboard - 메인 실행 파일
+Kubernetes Multi-Cluster Dashboard - Main Execution Script
 
-이 파일은 최상위 디렉토리에서 대시보드를 실행하기 위한 thin wrapper입니다.
+This script serves as the primary entry point for running the Kubernetes
+multi-cluster dashboard application from the project's root directory.
+
+It acts as a thin wrapper around the Streamlit CLI, configuring it to run
+the dashboard.py module from the src/kubernetes_dashboard package.
+
+Usage:
+    python main.py
+
+This approach provides a convenient way to start the dashboard without
+having to specify the full path to the dashboard.py file or use the
+module execution syntax.
+
+Note:
+    This script directly manipulates sys.argv to avoid Streamlit CLI warnings
+    that would otherwise appear when using subprocess or other approaches.
 """
 import os
 import sys
@@ -10,7 +25,8 @@ import sys
 import streamlit.web.cli as stcli
 
 if __name__ == "__main__":
-    # Streamlit CLI를 직접 호출하여 경고 메시지 방지
+    # Configure Streamlit CLI arguments to run the dashboard
+    # This approach prevents warning messages that would appear with other methods
     sys.argv = [
         "streamlit",
         "run",
@@ -18,4 +34,5 @@ if __name__ == "__main__":
             os.path.dirname(__file__), "src/kubernetes_dashboard/dashboard.py"
         ),
     ]
+    # Execute Streamlit CLI and exit with its return code
     sys.exit(stcli.main())

@@ -12,12 +12,14 @@ spec:
     image: nginx:latest
     resources:
       requests:
-        # 매우 큰 리소스 요청으로 Pending 상태 유발
-        memory: "100Gi"
-        cpu: "50"
+        # Intentionally requesting excessive resources to force Pending state
+        # This helps test the dashboard's ability to detect and display non-running pods
+        memory: "100Gi"  # Extremely high memory request that no node can satisfy
+        cpu: "50"        # Extremely high CPU request that no node can satisfy
       limits:
         memory: "100Gi"
         cpu: "50"
-  # 테스트를 위한 toleration 없이 특정 노드에만 스케줄링되도록 설정
+  # Using a non-existent node selector to ensure the pod remains in Pending state
+  # This simulates a scheduling failure scenario for testing the dashboard
   nodeSelector:
-    non-existent-node: "true"
+    non-existent-node: "true"  # This label doesn't exist on any node
