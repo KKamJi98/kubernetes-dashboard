@@ -44,7 +44,7 @@
    ```bash
    # Kubernetes 클러스터에 metrics-server 설치
    kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
-   
+
    # 설치 확인
    kubectl get deployment metrics-server -n kube-system
    ```
@@ -59,10 +59,10 @@
    ```bash
    # 최상위 디렉토리에서 직접 실행
    python main.py
-   
+
    # 또는 Poetry 사용
    poetry run dashboard
-   
+
    # 또는 Streamlit으로 직접 실행
    poetry run streamlit run src/kubernetes_dashboard/dashboard.py
    ```
