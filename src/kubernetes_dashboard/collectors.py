@@ -3,6 +3,12 @@
 이 모듈은 여러 Kubernetes 클러스터에서 병렬로 데이터를 수집하는 기능을 제공합니다.
 ThreadPoolExecutor를 사용하여 여러 클러스터에서 동시에 데이터를 수집하고,
 수집된 데이터를 통합하여 대시보드에 표시할 수 있는 형태로 반환합니다.
+
+주요 기능:
+- Pod 상태 및 메트릭 수집
+- 노드 리소스 사용량 수집
+- Pod 로그 수집
+- 클러스터 이벤트 수집
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -219,6 +225,7 @@ def collect(selected: tuple[str, ...]):
             - non_running_pods: 모든 클러스터의 non-running Pod 정보 목록
             - node_metrics: 모든 클러스터의 노드 메트릭 정보 목록
             - recent_restarts: 모든 클러스터의 최근 재시작된 Pod 정보 목록
+            - events: 모든 클러스터의 최근 이벤트 정보 목록
     """
     with ThreadPoolExecutor() as pool:
         non_running_lists = list(pool.map(_non_running_pods_list, selected))
@@ -226,6 +233,7 @@ def collect(selected: tuple[str, ...]):
         total_pods = list(pool.map(_total_pods, selected))
         nodes = sum(pool.map(_node_metrics, selected), [])
         restarts = sum(pool.map(_recent_restarts, selected), [])
+        events = sum([_get_cluster_events(ctx) for ctx in selected], [])
 
     return {
         "total_pods": sum(total_pods),
@@ -233,4 +241,65 @@ def collect(selected: tuple[str, ...]):
         "non_running_pods": sum(non_running_lists, []),
         "node_metrics": nodes,
         "recent_restarts": restarts,
+        "events": events,
     }
+def _get_pod_logs(ctx: str, pod_name: str, namespace: str, container: str = None, tail_lines: int = 100) -> str:
+    """특정 Pod의 로그를 가져옵니다.
+
+    Args:
+        ctx (str): Kubernetes 컨텍스트 이름
+        pod_name (str): Pod 이름
+        namespace (str): Pod가 위치한 네임스페이스
+        container (str, optional): 컨테이너 이름. 기본값은 None (첫 번째 컨테이너)
+        tail_lines (int, optional): 가져올 로그 라인 수. 기본값은 100
+
+    Returns:
+        str: Pod 로그 문자열
+    """
+    core, _ = api_for(ctx)
+    try:
+        return core.read_namespaced_pod_log(
+            name=pod_name,
+            namespace=namespace,
+            container=container,
+            tail_lines=tail_lines
+        )
+    except ApiException as e:
+        return f"Error retrieving logs: {e}"
+
+
+def _get_cluster_events(ctx: str, namespace: str = None, limit: int = 100) -> list[dict]:
+    """클러스터 이벤트를 가져옵니다.
+
+    Args:
+        ctx (str): Kubernetes 컨텍스트 이름
+        namespace (str, optional): 특정 네임스페이스의 이벤트만 가져올 경우. 기본값은 None (모든 네임스페이스)
+        limit (int, optional): 가져올 이벤트 수. 기본값은 100
+
+    Returns:
+        list[dict]: 이벤트 정보 목록 (cluster, type, reason, object, message, time 포함)
+    """
+    core, _ = api_for(ctx)
+    try:
+        if namespace:
+            events = core.list_namespaced_event(namespace=namespace, limit=limit)
+        else:
+            events = core.list_event_for_all_namespaces(limit=limit)
+            
+        result = []
+        for event in events.items:
+            result.append({
+                "cluster": ctx,
+                "type": event.type,
+                "reason": event.reason,
+                "object": f"{event.involved_object.kind}/{event.involved_object.name}",
+                "message": event.message,
+                "time": event.last_timestamp or event.event_time,
+            })
+        
+        # 시간 기준 내림차순 정렬
+        result.sort(key=lambda x: x["time"] if x["time"] else datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+        return result
+    except ApiException as e:
+        print(f"Error retrieving events from cluster {ctx}: {e}")
+        return []
