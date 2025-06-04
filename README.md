@@ -16,6 +16,9 @@
 - Pod 재시작 및 비정상 Pod 추적
 - 실시간 메트릭 시각화
 - 간단하고 직관적인 인터페이스
+- Pod 로그 및 클러스터 이벤트 조회
+- 자동 새로고침 기능
+- Kubernetes secrets를 통한 kubeconfig 관리
 
 ## 설치 방법
 
@@ -71,6 +74,10 @@
 
 3. 사이드바에서 모니터링할 Kubernetes 컨텍스트 선택
 
+4. 자동 새로고침 설정 (필요한 경우)
+
+5. 로그 및 이벤트 페이지에서 Pod 로그와 클러스터 이벤트 확인
+
 ## 개발 환경 설정
 
 ### 개발 환경 구성
@@ -106,9 +113,28 @@ isort .
 # Docker 이미지 빌드
 docker build -t kubernetes-dashboard .
 
-# 컨테이너 실행
+# 컨테이너 실행 (로컬 kubeconfig 사용)
 docker run -p 8501:8501 -v ~/.kube:/root/.kube kubernetes-dashboard
 ```
+
+## Kubernetes 배포
+
+1. kubeconfig 파일을 Secret으로 생성:
+   ```bash
+   kubectl create namespace k8s-dashboard
+   kubectl create secret generic dashboard-kubeconfig -n k8s-dashboard --from-file=kubeconfig=$HOME/.kube/config
+   ```
+
+2. 대시보드 배포:
+   ```bash
+   kubectl apply -f kubernetes/dashboard-deployment.yaml
+   ```
+
+3. Ingress 설정 수정 (필요한 경우):
+   ```yaml
+   # kubernetes/dashboard-deployment.yaml 파일에서 host 값을 실제 도메인으로 변경
+   - host: dashboard.example.com  # 실제 도메인으로 변경
+   ```
 
 ## 테스트 환경
 
