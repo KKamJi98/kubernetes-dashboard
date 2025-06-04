@@ -9,14 +9,18 @@ UI 및 데이터 시각화를 구현합니다. 대시보드는 여러 클러스�
 - Pod 상태 및 개수 표시
 - 노드 리소스 사용량 시각화
 - 최근 재시작된 Pod 추적
+- Pod 로그 및 클러스터 이벤트 조회
+- 자동 새로고침 기능
 """
 
 import pandas as pd
 import streamlit as st
 from kubernetes.config.kube_config import list_kube_config_contexts
 
-from kubernetes_dashboard.collectors import _non_running_pods, _total_pods, collect
+from kubernetes_dashboard.collectors import (_get_cluster_events, _get_pod_logs,
+                                           _non_running_pods, _total_pods, collect)
 from kubernetes_dashboard.quantity import fmt_bytes_gib, fmt_cores, fmt_percent
+from kubernetes_dashboard.kube_client import api_for
 
 
 def main():
@@ -25,8 +29,9 @@ def main():
     Streamlit 애플리케이션의 진입점으로, 다음 기능을 수행합니다:
     1. 페이지 설정 및 레이아웃 구성
     2. 사이드바에서 클러스터 선택 UI 제공
-    3. 페이지 네비게이션 (개요 또는 클러스터별 상세 페이지)
+    3. 페이지 네비게이션 (개요, 클러스터별 상세 페이지, 로그/이벤트 페이지)
     4. 선택된 클러스터에서 데이터 수집 및 시각화
+    5. 자동 새로고침 설정
     """
     # ---------- Page setup ----------
     st.set_page_config("K8s Multi-Cluster Dashboard", layout="wide")
@@ -40,8 +45,37 @@ def main():
     if not selected:
         st.stop()
 
+    # ---------- 자동 새로고침 설정 ----------
+    refresh_interval = st.sidebar.slider(
+        "자동 새로고침 간격 (초)", 
+        min_value=0, 
+        max_value=300, 
+        value=0, 
+        step=30,
+        help="0으로 설정하면 자동 새로고침이 비활성화됩니다."
+    )
+    
+    if refresh_interval > 0:
+        st.sidebar.info(f"{refresh_interval}초마다 자동으로 새로고침됩니다.")
+        st.sidebar.button("수동 새로고침")
+        st.empty()  # 새로고침을 위한 빈 요소
+        
+        # 자동 새로고침 스크립트 추가
+        st.markdown(
+            f"""
+            <script>
+                var refreshInterval = {refresh_interval * 1000};
+                setInterval(function() {{
+                    window.location.reload();
+                }}, refreshInterval);
+            </script>
+            """,
+            unsafe_allow_html=True
+        )
+
     # ---------- Page navigation ----------
-    page = st.sidebar.radio("🗂️ Pages", ["Overview"] + selected, index=0)
+    pages = ["Overview"] + selected + ["Logs & Events"]
+    page = st.sidebar.radio("🗂️ Pages", pages, index=0)
 
     # ---------- Collect data once for all pages ----------
     data = collect(tuple(selected))
@@ -127,11 +161,19 @@ def main():
             st.dataframe(pd.DataFrame(data["recent_restarts"]))
         else:
             st.success("최근 1시간 내 재시작된 Pod가 없습니다.")
+            
+        # 최근 이벤트 표시
+        if data["events"]:
+            st.subheader("Recent Events")
+            events_df = pd.DataFrame(data["events"][:10])  # 최근 10개 이벤트만 표시
+            st.dataframe(events_df[["cluster", "type", "reason", "object", "message", "time"]])
+        else:
+            st.info("최근 이벤트가 없습니다.")
 
     # ======================================================
     # ===========  Per-Cluster detailed pages  =============
     # ======================================================
-    else:
+    elif page in selected:
         # 클러스터별 상세 페이지 표시
         cluster = page  # page value equals context name
         st.header(f"🔍 Cluster Detail — {cluster}")
@@ -200,6 +242,76 @@ def main():
             st.dataframe(pd.DataFrame(restarts))
         else:
             st.success("최근 1시간 내 재시작된 Pod가 없습니다.")
+
+    # ======================================================
+    # ================  Logs & Events  ====================
+    # ======================================================
+    elif page == "Logs & Events":
+        st.header("📜 Logs & Events")
+        
+        # 탭 생성
+        tab1, tab2 = st.tabs(["Pod Logs", "Cluster Events"])
+        
+        # Pod 로그 탭
+        with tab1:
+            st.subheader("Pod Logs")
+            
+            # 클러스터 선택
+            cluster = st.selectbox("Select Cluster", selected)
+            
+            # 네임스페이스 목록 가져오기
+            core, _ = api_for(cluster)
+            namespaces = [ns.metadata.name for ns in core.list_namespace().items]
+            namespace = st.selectbox("Select Namespace", namespaces)
+            
+            # 선택한 네임스페이스의 Pod 목록 가져오기
+            pods = [pod.metadata.name for pod in core.list_namespaced_pod(namespace).items]
+            if not pods:
+                st.info(f"No pods found in namespace {namespace}")
+            else:
+                pod_name = st.selectbox("Select Pod", pods)
+                
+                # 선택한 Pod의 컨테이너 목록 가져오기
+                pod = core.read_namespaced_pod(pod_name, namespace)
+                containers = [container.name for container in pod.spec.containers]
+                container = st.selectbox("Select Container", containers)
+                
+                # 로그 라인 수 선택
+                tail_lines = st.slider("Log Lines", min_value=10, max_value=500, value=100, step=10)
+                
+                # 로그 가져오기
+                logs = _get_pod_logs(cluster, pod_name, namespace, container, tail_lines)
+                
+                # 로그 표시
+                st.text_area("Pod Logs", logs, height=400)
+        
+        # 클러스터 이벤트 탭
+        with tab2:
+            st.subheader("Cluster Events")
+            
+            # 클러스터 및 네임스페이스 선택
+            col1, col2 = st.columns(2)
+            with col1:
+                event_cluster = st.selectbox("Select Cluster for Events", selected, key="event_cluster")
+            with col2:
+                event_namespaces = ["All Namespaces"] + [ns.metadata.name for ns in api_for(event_cluster)[0].list_namespace().items]
+                event_namespace = st.selectbox("Select Namespace for Events", event_namespaces)
+            
+            # 이벤트 수 선택
+            event_limit = st.slider("Number of Events", min_value=10, max_value=500, value=100, step=10)
+            
+            # 이벤트 가져오기
+            if event_namespace == "All Namespaces":
+                events = _get_cluster_events(event_cluster, namespace=None, limit=event_limit)
+            else:
+                events = _get_cluster_events(event_cluster, namespace=event_namespace, limit=event_limit)
+            
+            # 이벤트 표시
+            if events:
+                events_df = pd.DataFrame(events)
+                st.dataframe(events_df[["type", "reason", "object", "message", "time"]], height=400)
+            else:
+                st.info("No events found")
 
 
 if __name__ == "__main__":
