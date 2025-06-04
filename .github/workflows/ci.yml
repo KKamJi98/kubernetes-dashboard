@@ -9,33 +9,31 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.13']
-
     steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
       with:
-        python-version: ${{ matrix.python-version }}
-
+        python-version: '3.13'
+    
     - name: Install Poetry
-      uses: snok/install-poetry@v1
-      with:
-        version: 1.7.1
-        virtualenvs-create: true
-        virtualenvs-in-project: true
-
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        poetry --version
+    
     - name: Install dependencies
-      run: poetry install --no-interaction
-
-    - name: Lint with black
-      run: poetry run black --check .
-
-    - name: Sort imports with isort
-      run: poetry run isort --check .
-
-    - name: Test with pytest
-      run: poetry run pytest
+      run: |
+        poetry install
+    
+    - name: Run black
+      run: |
+        poetry run black --check .
+    
+    - name: Run isort
+      run: |
+        poetry run isort --check .
+    
+    - name: Run tests
+      run: |
+        poetry run pytest

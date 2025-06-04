@@ -39,3 +39,13 @@ def test_fmt_bytes_gib():
     assert fmt_bytes_gib(2.5 * 1024 * 1024 * 1024) == "2.50 GiB"
     # 512 MiB
     assert fmt_bytes_gib(512 * 1024 * 1024) == "0.50 GiB"
+
+
+def test_fmt_percent():
+    """Test formatting percentage values."""
+    from kubernetes_dashboard.quantity import fmt_percent
+    
+    assert fmt_percent(75.5) == "75.50%"
+    assert fmt_percent(100.0) == "100.00%"
+    assert fmt_percent(0.0) == "0.00%"
+    assert fmt_percent("N/A") == "N/A"

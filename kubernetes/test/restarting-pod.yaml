@@ -3,19 +3,15 @@ kind: Pod
 metadata:
   name: restarting-pod
   namespace: default
-  labels:
-    app: k8sdash-test
-    test: restart
 spec:
   containers:
-  - name: restarting-container
+  - name: crasher
     image: busybox:latest
     command: ["/bin/sh", "-c"]
     args:
     - |
-      echo "Starting container..."
-      sleep 10
-      echo "Simulating crash..."
+      echo "This pod will crash in 30 seconds..."
+      sleep 30
       exit 1
     resources:
       requests:

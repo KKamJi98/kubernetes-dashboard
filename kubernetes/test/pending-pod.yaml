@@ -3,21 +3,17 @@ kind: Pod
 metadata:
   name: pending-pod
   namespace: default
-  labels:
-    app: k8sdash-test
-    test: pending
 spec:
   containers:
-  - name: pending-container
+  - name: nginx
     image: nginx:latest
     resources:
       requests:
-        # 매우 큰 리소스 요청으로 Pending 상태 유발
-        memory: "100Gi"
-        cpu: "50"
+        memory: "128Mi"
+        cpu: "500m"
       limits:
-        memory: "100Gi"
-        cpu: "50"
-  # 테스트를 위한 toleration 없이 특정 노드에만 스케줄링되도록 설정
+        memory: "256Mi"
+        cpu: "1"
+  # 존재하지 않는 노드 선택자를 사용하여 Pending 상태 유지
   nodeSelector:
-    non-existent-node: "true"
+    non-existent-label: "true"
