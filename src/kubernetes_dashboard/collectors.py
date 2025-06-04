@@ -243,7 +243,15 @@ def collect(selected: tuple[str, ...]):
         "recent_restarts": restarts,
         "events": events,
     }
-def _get_pod_logs(ctx: str, pod_name: str, namespace: str, container: str = None, tail_lines: int = 100) -> str:
+
+
+def _get_pod_logs(
+    ctx: str,
+    pod_name: str,
+    namespace: str,
+    container: str = None,
+    tail_lines: int = 100,
+) -> str:
     """특정 Pod의 로그를 가져옵니다.
 
     Args:
@@ -262,13 +270,15 @@ def _get_pod_logs(ctx: str, pod_name: str, namespace: str, container: str = None
             name=pod_name,
             namespace=namespace,
             container=container,
-            tail_lines=tail_lines
+            tail_lines=tail_lines,
         )
     except ApiException as e:
         return f"Error retrieving logs: {e}"
 
 
-def _get_cluster_events(ctx: str, namespace: str = None, limit: int = 100) -> list[dict]:
+def _get_cluster_events(
+    ctx: str, namespace: str = None, limit: int = 100
+) -> list[dict]:
     """클러스터 이벤트를 가져옵니다.
 
     Args:
@@ -285,20 +295,27 @@ def _get_cluster_events(ctx: str, namespace: str = None, limit: int = 100) -> li
             events = core.list_namespaced_event(namespace=namespace, limit=limit)
         else:
             events = core.list_event_for_all_namespaces(limit=limit)
-            
+
         result = []
         for event in events.items:
-            result.append({
-                "cluster": ctx,
-                "type": event.type,
-                "reason": event.reason,
-                "object": f"{event.involved_object.kind}/{event.involved_object.name}",
-                "message": event.message,
-                "time": event.last_timestamp or event.event_time,
-            })
-        
+            result.append(
+                {
+                    "cluster": ctx,
+                    "type": event.type,
+                    "reason": event.reason,
+                    "object": f"{event.involved_object.kind}/{event.involved_object.name}",
+                    "message": event.message,
+                    "time": event.last_timestamp or event.event_time,
+                }
+            )
+
         # 시간 기준 내림차순 정렬
-        result.sort(key=lambda x: x["time"] if x["time"] else datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+        result.sort(
+            key=lambda x: (
+                x["time"] if x["time"] else datetime.min.replace(tzinfo=timezone.utc)
+            ),
+            reverse=True,
+        )
         return result
     except ApiException as e:
         print(f"Error retrieving events from cluster {ctx}: {e}")

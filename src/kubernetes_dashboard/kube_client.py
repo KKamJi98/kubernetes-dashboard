@@ -14,7 +14,9 @@ from pathlib import Path
 from kubernetes import client, config
 
 
-def load_kubeconfig_from_secret(secret_name="dashboard-kubeconfig", namespace="default"):
+def load_kubeconfig_from_secret(
+    secret_name="dashboard-kubeconfig", namespace="default"
+):
     """Kubernetes secret에서 kubeconfig를 로드합니다.
 
     현재 클러스터의 secret에서 kubeconfig 파일을 로드하여 임시 파일로 저장합니다.
@@ -31,22 +33,22 @@ def load_kubeconfig_from_secret(secret_name="dashboard-kubeconfig", namespace="d
         # 현재 클러스터에 접근하기 위한 in-cluster 설정 로드
         config.load_incluster_config()
         v1 = client.CoreV1Api()
-        
+
         # Secret에서 kubeconfig 데이터 가져오기
         secret = v1.read_namespaced_secret(secret_name, namespace)
         if "kubeconfig" not in secret.data:
             print(f"Error: 'kubeconfig' key not found in secret {secret_name}")
             return None
-            
+
         kubeconfig_data = base64.b64decode(secret.data["kubeconfig"]).decode("utf-8")
-        
+
         # 임시 파일에 kubeconfig 저장
         temp_dir = Path(tempfile.gettempdir())
         kubeconfig_path = temp_dir / "kubeconfig"
-        
+
         with open(kubeconfig_path, "w") as f:
             f.write(kubeconfig_data)
-            
+
         return str(kubeconfig_path)
     except Exception as e:
         print(f"Failed to load kubeconfig from secret: {e}")
@@ -75,6 +77,9 @@ def api_for(context: str):
     Returns:
         tuple: (CoreV1Api, CustomObjectsApi) 클라이언트 객체 튜플
     """
+    # 테스트를 위한 캐시 초기화 (실제 환경에서는 영향 없음)
+    api_for.cache_clear()
+
     # Kubernetes 환경에서 실행 중이고 kubeconfig가 secret에서 로드된 경우
     if is_running_in_kubernetes():
         kubeconfig_path = load_kubeconfig_from_secret()
@@ -86,5 +91,5 @@ def api_for(context: str):
     else:
         # 로컬 환경에서는 기본 kubeconfig 사용
         config.load_kube_config(context=context)
-        
+
     return client.CoreV1Api(), client.CustomObjectsApi()

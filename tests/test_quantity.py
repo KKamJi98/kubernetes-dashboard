@@ -44,7 +44,7 @@ def test_fmt_bytes_gib():
 def test_fmt_percent():
     """Test formatting percentage values."""
     from kubernetes_dashboard.quantity import fmt_percent
-    
+
     assert fmt_percent(75.5) == "75.50%"
     assert fmt_percent(100.0) == "100.00%"
     assert fmt_percent(0.0) == "0.00%"
