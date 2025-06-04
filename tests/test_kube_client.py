@@ -15,10 +15,15 @@ from kubernetes_dashboard.kube_client import (
 class TestKubeClient(unittest.TestCase):
     """Test cases for the kube_client module."""
 
+    def setUp(self):
+        # 각 테스트 전에 api_for 캐시 초기화
+        api_for.cache_clear()
+
+    @patch("kubernetes_dashboard.kube_client.api_for.cache_clear")
     @patch("kubernetes_dashboard.kube_client.is_running_in_kubernetes")
     @patch("kubernetes_dashboard.kube_client.load_kubeconfig_from_secret")
     @patch("kubernetes_dashboard.kube_client.config")
-    def test_api_for_local_env(self, mock_config, mock_load_secret, mock_is_k8s):
+    def test_api_for_local_env(self, mock_config, mock_load_secret, mock_is_k8s, _):
         """Test api_for function in local environment."""
         # 로컬 환경 시뮬레이션
         mock_is_k8s.return_value = False
@@ -30,11 +35,12 @@ class TestKubeClient(unittest.TestCase):
         mock_config.load_kube_config.assert_called_once_with(context="test-context")
         mock_load_secret.assert_not_called()
 
+    @patch("kubernetes_dashboard.kube_client.api_for.cache_clear")
     @patch("kubernetes_dashboard.kube_client.is_running_in_kubernetes")
     @patch("kubernetes_dashboard.kube_client.load_kubeconfig_from_secret")
     @patch("kubernetes_dashboard.kube_client.config")
     def test_api_for_k8s_env_with_secret(
-        self, mock_config, mock_load_secret, mock_is_k8s
+        self, mock_config, mock_load_secret, mock_is_k8s, _
     ):
         """Test api_for function in Kubernetes environment with secret."""
         # Kubernetes 환경 시뮬레이션
@@ -50,11 +56,12 @@ class TestKubeClient(unittest.TestCase):
             config_file="/tmp/kubeconfig", context="test-context"
         )
 
+    @patch("kubernetes_dashboard.kube_client.api_for.cache_clear")
     @patch("kubernetes_dashboard.kube_client.is_running_in_kubernetes")
     @patch("kubernetes_dashboard.kube_client.load_kubeconfig_from_secret")
     @patch("kubernetes_dashboard.kube_client.config")
     def test_api_for_k8s_env_without_secret(
-        self, mock_config, mock_load_secret, mock_is_k8s
+        self, mock_config, mock_load_secret, mock_is_k8s, _
     ):
         """Test api_for function in Kubernetes environment without secret."""
         # Kubernetes 환경 시뮬레이션 (Secret 없음)
