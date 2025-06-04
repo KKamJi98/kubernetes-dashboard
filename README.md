@@ -75,8 +75,14 @@
 3. 사이드바에서 모니터링할 Kubernetes 컨텍스트 선택
 
 4. 자동 새로고침 설정 (필요한 경우)
+   - 사이드바에서 새로고침 간격을 0~300초 사이로 설정
+   - 0초로 설정 시 자동 새로고침 비활성화
+   - 수동 새로고침 버튼 사용 가능
 
 5. 로그 및 이벤트 페이지에서 Pod 로그와 클러스터 이벤트 확인
+   - 클러스터, 네임스페이스, Pod, 컨테이너 선택 가능
+   - 로그 라인 수 조정 가능
+   - 이벤트 필터링 및 정렬 기능
 
 ## 개발 환경 설정
 
@@ -97,14 +103,23 @@ poetry shell
 ### 테스트 실행
 
 ```bash
+# 모든 테스트 실행
 pytest
+
+# 또는 자동화된 테스트 스크립트 사용
+./run_and_test.sh
 ```
 
 ### 코드 포맷팅
 
 ```bash
+# 코드 포맷팅 적용
 black .
 isort .
+
+# 코드 포맷팅 검사만 수행
+black --check .
+isort --check .
 ```
 
 ## Docker 배포
@@ -136,6 +151,12 @@ docker run -p 8501:8501 -v ~/.kube:/root/.kube kubernetes-dashboard
    - host: dashboard.example.com  # 실제 도메인으로 변경
    ```
 
+4. 서비스 접근:
+   ```bash
+   # 포트 포워딩을 통한 접근
+   kubectl port-forward -n k8s-dashboard svc/k8s-dashboard 8501:8501
+   ```
+
 ## 테스트 환경
 
 `kubernetes/test/` 디렉토리에는 대시보드 기능을 테스트하기 위한 매니페스트 파일이 포함되어 있습니다:
@@ -151,6 +172,11 @@ kubectl apply -f kubernetes/test/restarting-pod.yaml
 ## 기여하기
 
 기여는 언제나 환영합니다! 자세한 내용은 [CONTRIBUTING.md](CONTRIBUTING.md)를 참조하세요.
+
+1. 이슈 생성 또는 기존 이슈 선택
+2. 포크 및 브랜치 생성
+3. 코드 작성 및 테스트
+4. 풀 리퀘스트 제출
 
 ## 라이센스
 
