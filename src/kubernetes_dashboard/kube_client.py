@@ -2,11 +2,64 @@
 
 이 모듈은 Kubernetes API 클라이언트를 생성하고 캐싱하는 기능을 제공합니다.
 각 클러스터 컨텍스트별로 API 클라이언트를 캐싱하여 성능을 향상시킵니다.
+또한 Kubernetes secrets에서 kubeconfig를 로드하는 기능을 제공합니다.
 """
 
+import base64
+import os
+import tempfile
 from functools import lru_cache
+from pathlib import Path
 
 from kubernetes import client, config
+
+
+def load_kubeconfig_from_secret(secret_name="dashboard-kubeconfig", namespace="default"):
+    """Kubernetes secret에서 kubeconfig를 로드합니다.
+
+    현재 클러스터의 secret에서 kubeconfig 파일을 로드하여 임시 파일로 저장합니다.
+    이 함수는 대시보드가 Kubernetes 클러스터 내에서 실행될 때 사용됩니다.
+
+    Args:
+        secret_name (str): kubeconfig를 포함하는 secret 이름
+        namespace (str): secret이 위치한 namespace
+
+    Returns:
+        str: 임시 kubeconfig 파일 경로 또는 None (secret이 없는 경우)
+    """
+    try:
+        # 현재 클러스터에 접근하기 위한 in-cluster 설정 로드
+        config.load_incluster_config()
+        v1 = client.CoreV1Api()
+        
+        # Secret에서 kubeconfig 데이터 가져오기
+        secret = v1.read_namespaced_secret(secret_name, namespace)
+        if "kubeconfig" not in secret.data:
+            print(f"Error: 'kubeconfig' key not found in secret {secret_name}")
+            return None
+            
+        kubeconfig_data = base64.b64decode(secret.data["kubeconfig"]).decode("utf-8")
+        
+        # 임시 파일에 kubeconfig 저장
+        temp_dir = Path(tempfile.gettempdir())
+        kubeconfig_path = temp_dir / "kubeconfig"
+        
+        with open(kubeconfig_path, "w") as f:
+            f.write(kubeconfig_data)
+            
+        return str(kubeconfig_path)
+    except Exception as e:
+        print(f"Failed to load kubeconfig from secret: {e}")
+        return None
+
+
+def is_running_in_kubernetes():
+    """현재 환경이 Kubernetes 클러스터 내부인지 확인합니다.
+
+    Returns:
+        bool: Kubernetes 클러스터 내부에서 실행 중이면 True, 아니면 False
+    """
+    return os.path.exists("/var/run/secrets/kubernetes.io/serviceaccount/token")
 
 
 @lru_cache(maxsize=16)
@@ -22,5 +75,16 @@ def api_for(context: str):
     Returns:
         tuple: (CoreV1Api, CustomObjectsApi) 클라이언트 객체 튜플
     """
-    config.load_kube_config(context=context)
+    # Kubernetes 환경에서 실행 중이고 kubeconfig가 secret에서 로드된 경우
+    if is_running_in_kubernetes():
+        kubeconfig_path = load_kubeconfig_from_secret()
+        if kubeconfig_path:
+            config.load_kube_config(config_file=kubeconfig_path, context=context)
+        else:
+            # Secret에서 로드 실패 시 기본 kubeconfig 사용
+            config.load_kube_config(context=context)
+    else:
+        # 로컬 환경에서는 기본 kubeconfig 사용
+        config.load_kube_config(context=context)
+        
     return client.CoreV1Api(), client.CustomObjectsApi()
