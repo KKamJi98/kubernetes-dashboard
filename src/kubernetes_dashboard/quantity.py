@@ -6,18 +6,18 @@
 """
 
 import re
-from typing import Union
+from collections.abc import Mapping
 
 # 단위 변환 상수
 _KI = 1024
-_MEM = {"Ki": _KI, "Mi": _KI**2, "Gi": _KI**3, "Ti": _KI**4}
-_CPU = {"n": 1e-9, "u": 1e-6, "m": 1e-3, "": 1}
+_MEM: Mapping[str, float] = {"Ki": _KI, "Mi": _KI**2, "Gi": _KI**3, "Ti": _KI**4}
+_CPU: Mapping[str, float] = {"n": 1e-9, "u": 1e-6, "m": 1e-3, "": 1.0}
 
 # 수량 문자열 파싱을 위한 정규식
 _QUANTITY_RE = re.compile(r"^\s*([0-9.]+)\s*([a-zA-Z]*)\s*$")
 
 
-def _convert(raw: Union[str, int, float], table: dict[str, float]) -> float:
+def _convert(raw: str | int | float, table: Mapping[str, float]) -> float:
     """K8s quantity → float (bytes or cores).
 
     Kubernetes 수량 문자열을 실제 숫자 값으로 변환합니다.
@@ -33,7 +33,7 @@ def _convert(raw: Union[str, int, float], table: dict[str, float]) -> float:
         ValueError: 입력값이 None이거나 형식이 잘못된 경우
     """
     # 이미 숫자형이면 그대로 반환
-    if isinstance(raw, (int, float)):
+    if isinstance(raw, int | float):
         return float(raw)
 
     if raw is None:
@@ -44,11 +44,11 @@ def _convert(raw: Union[str, int, float], table: dict[str, float]) -> float:
         raise ValueError(f"Invalid quantity format: {raw!r}")
 
     num, unit = match.groups()
-    return float(num) * table.get(unit, 1)
+    return float(num) * table.get(unit, 1.0)
 
 
 # public helpers -------------------------------------------------------------
-def mem_to_bytes(q: Union[str, int, float]) -> float:
+def mem_to_bytes(q: str | int | float) -> float:
     """메모리 quantity → bytes
 
     Kubernetes 메모리 수량 문자열을 바이트로 변환합니다.
@@ -68,7 +68,7 @@ def mem_to_bytes(q: Union[str, int, float]) -> float:
     return _convert(q, _MEM)
 
 
-def cpu_to_cores(q: Union[str, int, float]) -> float:
+def cpu_to_cores(q: str | int | float) -> float:
     """CPU quantity → cores
 
     Kubernetes CPU 수량 문자열을 코어 수로 변환합니다.
@@ -89,7 +89,7 @@ def cpu_to_cores(q: Union[str, int, float]) -> float:
 
 
 # pretty-print helpers -------------------------------------------------------
-def fmt_bytes_gib(num_bytes: Union[str, int, float]) -> str:
+def fmt_bytes_gib(num_bytes: str | int | float) -> str:
     """Bytes → GiB 문자열 (소수점 2자리)
 
     바이트 값을 GiB 단위의 문자열로 변환합니다.
@@ -108,7 +108,7 @@ def fmt_bytes_gib(num_bytes: Union[str, int, float]) -> str:
     return f"{num / (1024 ** 3):.2f} GiB"
 
 
-def fmt_cores(cores: Union[str, int, float]) -> str:
+def fmt_cores(cores: str | int | float) -> str:
     """cores 실수 → 'x.xx cores'
 
     CPU 코어 값을 포맷팅된 문자열로 변환합니다.
@@ -126,7 +126,7 @@ def fmt_cores(cores: Union[str, int, float]) -> str:
     return f"{float(cores):.2f} cores"
 
 
-def fmt_percent(value: Union[str, int, float]) -> str:
+def fmt_percent(value: str | int | float) -> str:
     """퍼센트 값을 포맷팅된 문자열로 변환합니다.
 
     Args:
@@ -142,3 +142,9 @@ def fmt_percent(value: Union[str, int, float]) -> str:
     if value == "N/A":
         return "N/A"
     return f"{float(value):.2f}%"
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

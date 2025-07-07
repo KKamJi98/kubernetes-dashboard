@@ -6,7 +6,6 @@
 오픈 소스 멀티 클러스터 Kubernetes 대시보드로, Streamlit을 사용하여 여러 Kubernetes 클러스터의 실시간 모니터링 및 관리 기능을 제공합니다.
 
 ![Main Page](assets/img/main_homepage.png)
-
 ![Sub Page](assets/img/cluster_detail.png)
 
 ## 주요 기능
@@ -24,8 +23,8 @@
 
 ### 필수 요구사항
 
-- Python 3.13 이상
-- Poetry 패키지 관리자
+- Python 3.12 이상
+- uv 패키지 관리자
 - 하나 이상의 Kubernetes 클러스터 접근 권한
 - kubectl이 클러스터 컨텍스트로 구성되어 있어야 함
 - **metrics-server** (노드 및 Pod 리소스 사용량 확인에 필요)
@@ -38,9 +37,11 @@
    cd kubernetes-dashboard
    ```
 
-2. 의존성 설치:
+2. 가상 환경 생성 및 의존성 설치:
    ```bash
-   poetry install
+   uv venv
+   source .venv/bin/activate
+   uv pip install -e ".[dev]"
    ```
 
 3. 클러스터에 metrics-server 설치:
@@ -60,14 +61,14 @@
 
 1. 대시보드 시작:
    ```bash
-   # 최상위 디렉토리에서 직접 실행
-   python main.py
+   # 가상 환경 활성화
+   source .venv/bin/activate
 
-   # 또는 Poetry 사용
-   poetry run dashboard
+   # 대시보드 실행
+   dashboard
 
    # 또는 Streamlit으로 직접 실행
-   poetry run streamlit run src/kubernetes_dashboard/dashboard.py
+   streamlit run src/kubernetes_dashboard/dashboard.py
    ```
 
 2. 브라우저를 열고 `http://localhost:8501` 접속
@@ -93,16 +94,18 @@
 git clone https://github.com/yourusername/kubernetes-dashboard.git
 cd kubernetes-dashboard
 
-# 개발 도구를 포함한 의존성 설치
-poetry install
-
-# 가상 환경 활성화
-poetry shell
+# 가상 환경 생성 및 개발 도구를 포함한 의존성 설치
+uv venv
+source .venv/bin/activate
+uv pip install -e ".[dev]"
 ```
 
 ### 테스트 실행
 
 ```bash
+# 가상 환경 활성화
+source .venv/bin/activate
+
 # 모든 테스트 실행
 pytest
 
@@ -113,13 +116,18 @@ pytest
 ### 코드 포맷팅
 
 ```bash
+# 가상 환경 활성화
+source .venv/bin/activate
+
 # 코드 포맷팅 적용
+ruff format .
 black .
-isort .
+ruff check . --fix
 
 # 코드 포맷팅 검사만 수행
+ruff format . --check
 black --check .
-isort --check .
+ruff check .
 ```
 
 ## Docker 배포

@@ -49,16 +49,16 @@ We welcome suggestions for enhancements! Please create an issue with:
 ## Development Setup
 
 1. Clone the repository
-2. Install Poetry if you don't have it already
-3. Run `poetry install` to set up the development environment
-4. Run `poetry shell` to activate the virtual environment
+2. Install uv if you don't have it already
+3. Run `uv pip install -r requirements.txt` to set up the development environment
+4. Run `source .venv/bin/activate` to activate the virtual environment
 
 ## Testing
 
 Run tests with:
 
 ```bash
-poetry run pytest
+uv run pytest
 ```
 
 ## Code Style
@@ -70,8 +70,8 @@ This project uses:
 You can run these tools with:
 
 ```bash
-poetry run black .
-poetry run isort .
+uv run black .
+uv run ruff .
 ```
 
 ## Documentation

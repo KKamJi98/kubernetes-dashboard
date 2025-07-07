@@ -12,16 +12,18 @@ ThreadPoolExecutor를 사용하여 여러 클러스터에서 동시에 데이터
 """
 
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from functools import reduce
+from typing import Any
 
+from kubernetes.client import V1PodList
 from kubernetes.client.exceptions import ApiException
-
 from kubernetes_dashboard.kube_client import api_for
 from kubernetes_dashboard.quantity import cpu_to_cores, mem_to_bytes
 
 
 # ------------------- Single cluster functions ------------------- #
-def _get_all_pods(ctx: str) -> list:
+def _get_all_pods(ctx: str) -> V1PodList:
     """모든 Pod 목록을 반환합니다.
 
     Args:
@@ -31,10 +33,10 @@ def _get_all_pods(ctx: str) -> list:
         list: Pod 객체 목록
     """
     core, _ = api_for(ctx)
-    return core.list_pod_for_all_namespaces(watch=False).items
+    return core.list_pod_for_all_namespaces(watch=False)
 
 
-def _non_running_pods_list(ctx: str) -> list[dict]:
+def _non_running_pods_list(ctx: str) -> list[dict[str, Any]]:
     """Non-running pods 목록을 반환합니다.
 
     Running 상태가 아닌 모든 Pod의 정보를 수집합니다.
@@ -45,7 +47,7 @@ def _non_running_pods_list(ctx: str) -> list[dict]:
     Returns:
         list[dict]: Non-running Pod 정보 목록 (cluster, pod, ns, node, phase, reason 포함)
     """
-    pods = _get_all_pods(ctx)
+    pods = _get_all_pods(ctx).items
     result = []
     for p in pods:
         if p.status.phase != "Running":
@@ -83,10 +85,10 @@ def _total_pods(ctx: str) -> int:
     Returns:
         int: 클러스터 내 모든 Pod의 개수
     """
-    return len(_get_all_pods(ctx))
+    return len(_get_all_pods(ctx).items)
 
 
-def _node_metrics(ctx: str) -> list[dict]:
+def _node_metrics(ctx: str) -> list[dict[str, Any]]:
     """노드 메트릭을 수집합니다. metrics-server가 없으면 빈 리스트를 반환합니다.
 
     metrics.k8s.io API를 통해 노드의 CPU 및 메모리 사용량을 수집합니다.
@@ -106,7 +108,7 @@ def _node_metrics(ctx: str) -> list[dict]:
         core, cust = api_for(ctx)
         # 노드 용량 정보 가져오기
         nodes = core.list_node().items
-        node_capacities = {}
+        node_capacities: dict[str, dict[str, float]] = {}
         for node in nodes:
             node_name = node.metadata.name
             node_capacities[node_name] = {
@@ -116,15 +118,15 @@ def _node_metrics(ctx: str) -> list[dict]:
 
         # 노드 사용량 정보 가져오기
         res = cust.list_cluster_custom_object("metrics.k8s.io", "v1beta1", "nodes")
-        rows = []
+        rows: list[dict[str, Any]] = []
         for n in res["items"]:
             node_name = n["metadata"]["name"]
             cpu_usage = cpu_to_cores(n["usage"]["cpu"])
             mem_usage = mem_to_bytes(n["usage"]["memory"])
 
             # 용량 대비 사용량 퍼센트 계산
-            cpu_percent = "N/A"
-            mem_percent = "N/A"
+            cpu_percent: float | str = "N/A"
+            mem_percent: float | str = "N/A"
 
             if node_name in node_capacities:
                 cpu_capacity = node_capacities[node_name]["cpu"]
@@ -150,10 +152,7 @@ def _node_metrics(ctx: str) -> list[dict]:
     except ApiException as e:
         if e.status == 404:
             # metrics-server가 설치되지 않은 경우
-            print(
-                f"Warning: metrics-server not found in cluster '{ctx}'. "
-                f"Node metrics will not be available."
-            )
+            print(f"Warning: metrics-server not found in cluster '{ctx}'. " f"Node metrics will not be available.")
             # 노드 목록은 가져오되 메트릭은 N/A로 설정
             core, _ = api_for(ctx)
             nodes = core.list_node().items
@@ -173,7 +172,7 @@ def _node_metrics(ctx: str) -> list[dict]:
             raise
 
 
-def _recent_restarts(ctx: str) -> list[dict]:
+def _recent_restarts(ctx: str) -> list[dict[str, Any]]:
     """최근 1시간 내에 재시작된 Pod 목록을 반환합니다.
 
     컨테이너의 마지막 종료 시간을 확인하여 최근 1시간 내에 재시작된 Pod를 식별합니다.
@@ -185,17 +184,13 @@ def _recent_restarts(ctx: str) -> list[dict]:
         list[dict]: 최근 재시작된 Pod 정보 목록 (cluster, pod, ns, node, restarts 포함)
     """
     core, _ = api_for(ctx)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     pods = core.list_pod_for_all_namespaces(watch=False).items
-    out = []
+    out: list[dict[str, Any]] = []
     for p in pods:
         for cs in p.status.container_statuses or []:
             term = cs.last_state.terminated
-            if (
-                term
-                and term.finished_at
-                and (now - term.finished_at) <= timedelta(hours=1)
-            ):
+            if term and term.finished_at and (now - term.finished_at) <= timedelta(hours=1):
                 out.append(
                     {
                         "cluster": ctx,
@@ -210,7 +205,7 @@ def _recent_restarts(ctx: str) -> list[dict]:
 
 
 # ------------------- Multi-cluster integration entry point ------------------- #
-def collect(selected: tuple[str, ...]):
+def collect(selected: tuple[str, ...]) -> dict[str, Any]:
     """여러 클러스터에서 데이터를 병렬로 수집하여 통합합니다.
 
     ThreadPoolExecutor를 사용하여 선택된 모든 클러스터에서 동시에 데이터를 수집합니다.
@@ -231,14 +226,25 @@ def collect(selected: tuple[str, ...]):
         non_running_lists = list(pool.map(_non_running_pods_list, selected))
         non_running = [len(nr_list) for nr_list in non_running_lists]
         total_pods = list(pool.map(_total_pods, selected))
-        nodes = sum(pool.map(_node_metrics, selected), [])
-        restarts = sum(pool.map(_recent_restarts, selected), [])
-        events = sum([_get_cluster_events(ctx) for ctx in selected], [])
 
+        initial_nodes: list[dict[str, Any]] = []
+        nodes = reduce(lambda a, b: a + b, pool.map(_node_metrics, selected), initial_nodes)
+
+        initial_restarts: list[dict[str, Any]] = []
+        restarts = reduce(lambda a, b: a + b, pool.map(_recent_restarts, selected), initial_restarts)
+
+        initial_events: list[dict[str, Any]] = []
+        events = reduce(
+            lambda a, b: a + b,
+            [_get_cluster_events(ctx) for ctx in selected],
+            initial_events,
+        )
+
+    initial_non_running: list[dict[str, Any]] = []
     return {
         "total_pods": sum(total_pods),
         "non_running_total": sum(non_running),
-        "non_running_pods": sum(non_running_lists, []),
+        "non_running_pods": reduce(lambda a, b: a + b, non_running_lists, initial_non_running),
         "node_metrics": nodes,
         "recent_restarts": restarts,
         "events": events,
@@ -249,7 +255,7 @@ def _get_pod_logs(
     ctx: str,
     pod_name: str,
     namespace: str,
-    container: str = None,
+    container: str | None = None,
     tail_lines: int = 100,
 ) -> str:
     """특정 Pod의 로그를 가져옵니다.
@@ -266,19 +272,18 @@ def _get_pod_logs(
     """
     core, _ = api_for(ctx)
     try:
-        return core.read_namespaced_pod_log(
+        logs: str = core.read_namespaced_pod_log(
             name=pod_name,
             namespace=namespace,
             container=container,
             tail_lines=tail_lines,
         )
+        return logs
     except ApiException as e:
         return f"Error retrieving logs: {e}"
 
 
-def _get_cluster_events(
-    ctx: str, namespace: str = None, limit: int = 100
-) -> list[dict]:
+def _get_cluster_events(ctx: str, namespace: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
     """클러스터 이벤트를 가져옵니다.
 
     Args:
@@ -296,7 +301,7 @@ def _get_cluster_events(
         else:
             events = core.list_event_for_all_namespaces(limit=limit)
 
-        result = []
+        result: list[dict[str, Any]] = []
         for event in events.items:
             result.append(
                 {
@@ -311,9 +316,7 @@ def _get_cluster_events(
 
         # 시간 기준 내림차순 정렬
         result.sort(
-            key=lambda x: (
-                x["time"] if x["time"] else datetime.min.replace(tzinfo=timezone.utc)
-            ),
+            key=lambda x: (x["time"] if x["time"] else datetime.min.replace(tzinfo=UTC)),
             reverse=True,
         )
         return result

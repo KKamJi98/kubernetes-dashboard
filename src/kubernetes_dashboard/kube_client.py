@@ -11,12 +11,12 @@ import tempfile
 from functools import lru_cache
 from pathlib import Path
 
-from kubernetes import client, config
+from kubernetes import client
+from kubernetes.client import CoreV1Api, CustomObjectsApi
+from kubernetes.config import list_kube_config_contexts, load_incluster_config, load_kube_config
 
 
-def load_kubeconfig_from_secret(
-    secret_name="dashboard-kubeconfig", namespace="default"
-):
+def load_kubeconfig_from_secret(secret_name: str = "dashboard-kubeconfig", namespace: str = "default") -> str | None:
     """Kubernetes secret에서 kubeconfig를 로드합니다.
 
     현재 클러스터의 secret에서 kubeconfig 파일을 로드하여 임시 파일로 저장합니다.
@@ -31,7 +31,7 @@ def load_kubeconfig_from_secret(
     """
     try:
         # 현재 클러스터에 접근하기 위한 in-cluster 설정 로드
-        config.load_incluster_config()
+        load_incluster_config()
         v1 = client.CoreV1Api()
 
         # Secret에서 kubeconfig 데이터 가져오기
@@ -55,7 +55,7 @@ def load_kubeconfig_from_secret(
         return None
 
 
-def is_running_in_kubernetes():
+def is_running_in_kubernetes() -> bool:
     """현재 환경이 Kubernetes 클러스터 내부인지 확인합니다.
 
     Returns:
@@ -65,7 +65,7 @@ def is_running_in_kubernetes():
 
 
 @lru_cache(maxsize=16)
-def api_for(context: str):
+def api_for(context: str) -> tuple[CoreV1Api, CustomObjectsApi]:
     """특정 컨텍스트에 대한 Kubernetes API 클라이언트를 반환합니다.
 
     LRU 캐시를 사용하여 동일한 컨텍스트에 대한 반복 호출을 최적화합니다.
@@ -84,12 +84,26 @@ def api_for(context: str):
     if is_running_in_kubernetes():
         kubeconfig_path = load_kubeconfig_from_secret()
         if kubeconfig_path:
-            config.load_kube_config(config_file=kubeconfig_path, context=context)
+            load_kube_config(config_file=kubeconfig_path, context=context)
         else:
             # Secret에서 로드 실패 시 기본 kubeconfig 사용
-            config.load_kube_config(context=context)
+            load_kube_config(context=context)
     else:
         # 로컬 환경에서는 기본 kubeconfig 사용
-        config.load_kube_config(context=context)
+        load_kube_config(context=context)
 
     return client.CoreV1Api(), client.CustomObjectsApi()
+
+
+if __name__ == "__main__":
+    # 테스트를 위한 간단한 실행
+    contexts, _ = list_kube_config_contexts()
+    if not contexts:
+        print("No Kubernetes contexts found.")
+    else:
+        print(f"Found {len(contexts)} contexts.")
+        for ctx in contexts:
+            print(f"  - {ctx['name']}")
+            core_api, custom_api = api_for(ctx["name"])
+            print(f"    CoreV1Api: {core_api.api_client.configuration.host}")
+            print(f"    CustomObjectsApi: {custom_api.api_client.configuration.host}")

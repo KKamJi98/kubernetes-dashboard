@@ -6,11 +6,6 @@ from unittest.mock import MagicMock, patch
 from kubernetes_dashboard.collectors import (
     _get_cluster_events,
     _get_pod_logs,
-    _node_metrics,
-    _non_running_pods,
-    _non_running_pods_list,
-    _recent_restarts,
-    _total_pods,
     collect,
 )
 
@@ -19,7 +14,7 @@ class TestCollectors(unittest.TestCase):
     """Test cases for the collectors module."""
 
     @patch("kubernetes_dashboard.collectors.api_for")
-    def test_get_pod_logs(self, mock_api_for):
+    def test_get_pod_logs(self, mock_api_for: MagicMock) -> None:
         """Test _get_pod_logs function."""
         # Mock 설정
         mock_core = MagicMock()
@@ -36,9 +31,9 @@ class TestCollectors(unittest.TestCase):
         )
 
     @patch("kubernetes_dashboard.collectors.api_for")
-    def test_get_cluster_events(self, mock_api_for):
+    def test_get_cluster_events(self, mock_api_for: MagicMock) -> None:
         """Test _get_cluster_events function."""
-        # Mock 설정
+        # Mock 수정
         mock_core = MagicMock()
         mock_event = MagicMock()
         mock_event.type = "Normal"
@@ -74,12 +69,12 @@ class TestCollectors(unittest.TestCase):
     @patch("kubernetes_dashboard.collectors._non_running_pods_list")
     def test_collect(
         self,
-        mock_non_running_pods_list,
-        mock_total_pods,
-        mock_node_metrics,
-        mock_recent_restarts,
-        mock_get_cluster_events,
-    ):
+        mock_non_running_pods_list: MagicMock,
+        mock_total_pods: MagicMock,
+        mock_node_metrics: MagicMock,
+        mock_recent_restarts: MagicMock,
+        mock_get_cluster_events: MagicMock,
+    ) -> None:
         """Test collect function."""
         # Mock 설정
         mock_non_running_pods_list.side_effect = [

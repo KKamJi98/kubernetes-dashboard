@@ -13,17 +13,15 @@ RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/s
     && mv kubectl /usr/local/bin/
 
 # Poetry 설치
-RUN pip install poetry
+RUN pip install uv
 
 # 의존성 파일 복사
-COPY pyproject.toml poetry.lock* ./
-
-# 의존성 설치 (개발 의존성 제외)
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-dev --no-interaction --no-ansi
+COPY pyproject.toml ./
+RUN uv pip install -r pyproject.toml --system
 
 # 소스 코드 복사
 COPY . .
+RUN uv pip install . --system
 
 # 포트 설정
 EXPOSE 8501
