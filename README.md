@@ -91,7 +91,7 @@
 
 ```bash
 # 저장소 복제
-git clone https://github.com/yourusername/kubernetes-dashboard.git
+git clone https://github.com/KKamJi98/kubernetes-dashboard.git
 cd kubernetes-dashboard
 
 # 가상 환경 생성 및 개발 도구를 포함한 의존성 설치
