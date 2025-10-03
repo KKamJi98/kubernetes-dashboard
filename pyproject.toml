@@ -15,19 +15,19 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "streamlit>=1.34.0",
-    "kubernetes>=29.0.0",
-    "pandas>=2.2.2",
+    "streamlit>=1.50.0",
+    "kubernetes>=34.1.0",
+    "pandas>=2.3.3",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "ruff",
-    "black",
-    "mypy",
-    "pytest",
-    "pytest-cov",
-    "pre-commit",
+    "ruff>=0.13.3",
+    "black>=25.9.0",
+    "mypy>=1.18.2",
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
+    "pre-commit>=4.3.0",
 ]
 
 [project.scripts]
@@ -53,6 +53,8 @@ build-backend = "hatchling.build"
 
 [tool.ruff]
 line-length = 120
+
+[tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "A", "C4", "T10", "RUF"]
 ignore = ["E501"]
 

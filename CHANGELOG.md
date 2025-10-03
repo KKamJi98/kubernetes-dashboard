@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 (2025-10-03)
+
+### Dependency Updates
+
+* bump core and dev dependencies to latest python ecosystem releases
+
 ## 0.1.0 (2025-07-07)
 
 
