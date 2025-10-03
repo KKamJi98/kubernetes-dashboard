@@ -43,7 +43,9 @@ kubernetes-dashboard/
 
 - 코드는 `black`과 `ruff`로 포맷팅
 - `ruff`는 0.13.3 버전으로 고정되어 있으며 pre-commit과 CI가 동일한 명령(`ruff check . --fix --exit-non-zero-on-fix`)을 실행합니다.
+- pre-commit의 `mypy`와 `pytest` 훅은 `.venv` 환경을 재사용하므로, `uv venv && uv pip install -e ".[dev]"` 이후 `pre-commit install --install-hooks`를 실행해 두고 사용합니다.
 - `uv run ruff check . --fix --exit-non-zero-on-fix` 명령 실행 시 수정 사항이 발생하지 않을 때까지 반복하고, 두 번째 실행에서도 성공하는지 확인합니다.
+- 커밋 전 `pre-commit run --all-files`를 두 번 연속 실행해 추가 수정 없이 모든 훅이 통과하는지 검증합니다.
 - `black`, `ruff`, `mypy`, `pytest`를 모두 통과한 상태에서만 GitHub에 커밋 및 푸시
 
 ### 문서 관리

@@ -134,6 +134,19 @@ ruff check . --exit-non-zero-on-fix
 
 > **참고**: 프로젝트와 CI는 `ruff==0.13.3` 버전을 사용합니다. 위 명령어는 동일한 동작을 보장하며, `pre-commit run --all-files`를 통해 전체 훅을 로컬에서 미리 검증할 수 있습니다.
 
+## pre-commit 검사
+
+```bash
+# 최초 1회만 pre-commit 훅 설치
+pre-commit install --install-hooks
+
+# 모든 훅 전체 실행 (수정 없음 확인)
+pre-commit run --all-files
+pre-commit run --all-files  # 두 번째 실행으로 잔여 수정 여부 확인
+```
+
+> `mypy`와 `pytest` 훅은 `.venv` 환경을 재사용합니다. `uv venv && uv pip install -e ".[dev]"`를 거친 뒤 위 명령을 실행하면, 대규모 패키지를 매번 다시 설치하지 않아 검사 시간이 크게 줄어듭니다.
+
 ## Docker 배포
 
 ```bash
