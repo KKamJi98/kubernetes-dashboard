@@ -11,9 +11,10 @@ import tempfile
 from functools import lru_cache
 from pathlib import Path
 
-from kubernetes import client
 from kubernetes.client import CoreV1Api, CustomObjectsApi
 from kubernetes.config import list_kube_config_contexts, load_incluster_config, load_kube_config
+
+from kubernetes import client
 
 
 def load_kubeconfig_from_secret(secret_name: str = "dashboard-kubeconfig", namespace: str = "default") -> str | None:

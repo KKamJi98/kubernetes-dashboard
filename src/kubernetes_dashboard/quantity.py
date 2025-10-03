@@ -105,7 +105,7 @@ def fmt_bytes_gib(num_bytes: str | int | float) -> str:
         '1.00 GiB'
     """
     num = float(num_bytes)
-    return f"{num / (1024 ** 3):.2f} GiB"
+    return f"{num / (1024**3):.2f} GiB"
 
 
 def fmt_cores(cores: str | int | float) -> str:

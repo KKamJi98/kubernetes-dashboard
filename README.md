@@ -122,13 +122,17 @@ source .venv/bin/activate
 # 코드 포맷팅 적용
 ruff format .
 black .
-ruff check . --fix
+ruff check . --fix --exit-non-zero-on-fix
+ruff check . --fix --exit-non-zero-on-fix  # 두 번째 실행으로 수정 사항 없는지 확인
 
 # 코드 포맷팅 검사만 수행
 ruff format . --check
 black --check .
 ruff check .
+ruff check . --exit-non-zero-on-fix
 ```
+
+> **참고**: 프로젝트와 CI는 `ruff==0.13.3` 버전을 사용합니다. 위 명령어는 동일한 동작을 보장하며, `pre-commit run --all-files`를 통해 전체 훅을 로컬에서 미리 검증할 수 있습니다.
 
 ## Docker 배포
 

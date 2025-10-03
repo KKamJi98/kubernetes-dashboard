@@ -18,6 +18,7 @@ from typing import Any
 
 from kubernetes.client import V1PodList
 from kubernetes.client.exceptions import ApiException
+
 from kubernetes_dashboard.kube_client import api_for
 from kubernetes_dashboard.quantity import cpu_to_cores, mem_to_bytes
 
@@ -152,7 +153,7 @@ def _node_metrics(ctx: str) -> list[dict[str, Any]]:
     except ApiException as e:
         if e.status == 404:
             # metrics-server가 설치되지 않은 경우
-            print(f"Warning: metrics-server not found in cluster '{ctx}'. " f"Node metrics will not be available.")
+            print(f"Warning: metrics-server not found in cluster '{ctx}'. Node metrics will not be available.")
             # 노드 목록은 가져오되 메트릭은 N/A로 설정
             core, _ = api_for(ctx)
             nodes = core.list_node().items
